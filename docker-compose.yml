@@ -1,0 +1,26 @@
+# Dev/prod local "production-like" (images buildées). Pour le hot-reload, préfère `pnpm dev`.
+# Supabase self-hosted se déploie séparément (ressource Coolify dédiée ou docker officiel Supabase).
+services:
+  server:
+    build:
+      context: .
+      dockerfile: apps/server/Dockerfile
+    environment:
+      PORT: "2567"
+      NODE_ENV: production
+      # SUPABASE_URL / SUPABASE_JWT_SECRET / SUPABASE_SERVICE_ROLE_KEY optionnels (mode invité sinon)
+    ports:
+      - "2567:2567"
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+      args:
+        NEXT_PUBLIC_COLYSEUS_URL: "ws://localhost:2567"
+        # NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321"
+        # NEXT_PUBLIC_SUPABASE_ANON_KEY: "..."
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server

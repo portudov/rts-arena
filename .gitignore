@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ruflo runtime & tooling (not part of the game)
+.claude/
+.claude-flow/
+.swarm/
+*.rvf
+*.rvf.lock
+
+# os
+.DS_Store
+Thumbs.db

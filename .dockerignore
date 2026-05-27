@@ -1,0 +1,29 @@
+# Dépendances & sorties de build (reconstruites dans l'image)
+**/node_modules
+**/dist
+**/.next
+**/out
+**/build
+
+# VCS & outils
+.git
+.gitignore
+.vscode
+.idea
+
+# Runtime ruflo (hors application)
+.claude
+.claude-flow
+.swarm
+*.rvf
+*.rvf.lock
+
+# Env & logs (les variables viennent de Coolify)
+.env
+.env.local
+.env.*.local
+**/*.log
+
+# OS
+**/.DS_Store
+Thumbs.db
