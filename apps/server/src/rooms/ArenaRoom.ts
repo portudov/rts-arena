@@ -10,16 +10,17 @@ import {
   type AllianceRequestPayload,
   type AllianceAcceptPayload,
 } from "@rts/shared";
+import { MAP_TILES_W, MAP_TILES_H } from "@rts/shared";
 import { ArenaState } from "../schema/ArenaState";
 import { verifySupabaseJwt } from "../auth/verifyJwt";
 import * as intents from "../intents";
 import {
-  createInitialZones,
+  createZones,
   createPlayer,
   createBot,
-  playerStartPositions,
   neutralizePlayer,
 } from "../systems/setup";
+import { generateMap } from "../systems/mapgen";
 import { updateBotAI } from "../systems/botAI";
 import { updateEconomy } from "../systems/economy";
 import { updateMovement } from "../systems/movement";
@@ -35,23 +36,38 @@ export class ArenaRoom extends Room<ArenaState> {
   private ended = false;
   private solo = false;
   private botTimer = 0;
+  // Positions de départ équilibrées (rotation symétrique) issues de la génération de carte.
+  private startPositions: { x: number; y: number }[] = [];
 
   override async onAuth(_client: Client, options: { token?: string }): Promise<AuthData> {
     return verifySupabaseJwt(options?.token);
   }
 
-  override onCreate(options?: { mode?: string; bots?: number }): void {
+  override onCreate(options?: { mode?: string; bots?: number; seed?: number }): void {
     this.setState(new ArenaState());
     this.state.timeLimitMs = GameConfig.MATCH_TIME_LIMIT_MS;
-    createInitialZones(this.state);
+
+    // Génération de la carte (terrain) : seed déterministe, symétrie rotationnelle.
+    const seed =
+      typeof options?.seed === "number" && Number.isFinite(options.seed)
+        ? Math.floor(options.seed)
+        : Math.floor(Math.random() * 1e9);
+    const map = generateMap(seed, GameConfig.MAX_PLAYERS);
+    this.startPositions = map.startPositions;
+    this.state.mapSeed = seed;
+    this.state.tilesW = MAP_TILES_W;
+    this.state.tilesH = MAP_TILES_H;
+    for (const t of map.tiles) this.state.tiles.push(t);
+    createZones(this.state, map.zones);
 
     // Mode SOLO : 1 humain vs bots (IA). Room privée + verrouillée, démarrage immédiat.
     if (options?.mode === "solo") {
       this.solo = true;
       const n = Math.max(1, Math.min(3, Math.floor(options.bots ?? 1)));
-      const center = { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
       for (let i = 0; i < n; i++) {
-        createBot(this.state, "bot:" + i, "🤖 Bot " + (i + 1), center, this.colorCounter++);
+        // Les bots prennent les dernières positions de départ (l'humain prendra la première).
+        const pos = this.startPositions[(this.startPositions.length - 1 - i + this.startPositions.length) % this.startPositions.length];
+        createBot(this.state, "bot:" + i, "🤖 Bot " + (i + 1), pos, this.colorCounter++);
       }
       this.setPrivate(true);
       this.lock();
@@ -87,8 +103,9 @@ export class ArenaRoom extends Room<ArenaState> {
   }
 
   override onJoin(client: Client, _options: unknown, auth: AuthData): void {
-    const center = { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
-    createPlayer(this.state, client.sessionId, auth, center, this.colorCounter++);
+    // Position provisoire = première position de départ ; startMatch() réassigne proprement.
+    const pos = this.startPositions[0] ?? { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
+    createPlayer(this.state, client.sessionId, auth, pos, this.colorCounter++);
     // En solo, la partie démarre dès que l'humain a rejoint (bots déjà créés).
     if (this.solo && this.state.phase === "lobby") this.startMatch();
   }
@@ -155,14 +172,17 @@ export class ArenaRoom extends Room<ArenaState> {
   private startMatch(): void {
     const ids: string[] = [];
     this.state.players.forEach((p) => ids.push(p.sessionId));
-    const positions = playerStartPositions(ids.length);
+    // Positions équilibrées (rotation symétrique) issues de la génération de carte.
+    const positions = this.startPositions;
+    const fallback = { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
     ids.forEach((id, i) => {
       const p = this.state.players.get(id);
       if (!p) return;
-      p.king.x = positions[i].x;
-      p.king.y = positions[i].y;
-      p.king.targetX = positions[i].x;
-      p.king.targetY = positions[i].y;
+      const pos = positions.length > 0 ? positions[i % positions.length] : fallback;
+      p.king.x = pos.x;
+      p.king.y = pos.y;
+      p.king.targetX = pos.x;
+      p.king.targetY = pos.y;
     });
     this.state.phase = "playing";
     this.state.elapsedMs = 0;

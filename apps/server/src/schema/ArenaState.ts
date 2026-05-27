@@ -12,6 +12,12 @@ export class ArenaState extends Schema {
   @type("number") lobbyCountdownMs = 0;
   @type("string") winnerId = "";
 
+  // Terrain (Phase 1) : grille de tuiles synchronisée une fois (row-major, types de terrain).
+  @type("number") mapSeed = 0;
+  @type("number") tilesW = 0;
+  @type("number") tilesH = 0;
+  @type(["number"]) tiles = new ArraySchema<number>();
+
   @type({ map: Player }) players = new MapSchema<Player>();
   @type({ map: Troop }) troops = new MapSchema<Troop>();
   @type({ map: Building }) buildings = new MapSchema<Building>();

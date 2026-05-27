@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Text } from "pixi.js";
-import { GameConfig } from "@rts/shared";
+import { GameConfig, TERRAIN, Terrain, TILE_SIZE } from "@rts/shared";
 
 // Vues typées de l'état Colyseus décodé côté client.
 interface KingView {
@@ -52,6 +52,9 @@ export interface StateView {
   timeLimitMs: number;
   lobbyCountdownMs: number;
   winnerId: string;
+  tilesW: number;
+  tilesH: number;
+  tiles: ArrayLike<number>;
   players: {
     forEach: (cb: (p: PlayerView, k: string) => void) => void;
     get: (k: string) => PlayerView | undefined;
@@ -110,6 +113,8 @@ interface Ping {
 export class PixiRenderer {
   private app = new Application();
   private world = new Container();
+  private tileLayer = new Graphics(); // grille de terrain statique (construite une seule fois)
+  private tilesBuilt = false;
   private g = new Graphics();
   private labels = new Map<string, Text>();
   private floaterTexts: Text[] = [];
@@ -159,6 +164,7 @@ export class PixiRenderer {
     this.onResize = fit;
     window.addEventListener("resize", fit);
 
+    this.world.addChild(this.tileLayer); // terrain SOUS les entités
     this.world.addChild(this.g);
     this.app.stage.addChild(this.world);
 
@@ -177,6 +183,35 @@ export class PixiRenderer {
     this.scale = Math.min(w / GameConfig.MAP_WIDTH, h / GameConfig.MAP_HEIGHT);
     this.ox = (w - GameConfig.MAP_WIDTH * this.scale) / 2;
     this.oy = (h - GameConfig.MAP_HEIGHT * this.scale) / 2;
+  }
+
+  /** Construit la grille de terrain UNE SEULE FOIS (statique, synchronisée une fois). */
+  private buildTiles(): void {
+    if (this.tilesBuilt) return;
+    const st = this.getState();
+    if (!st || !st.tilesW || st.tiles.length < st.tilesW * st.tilesH) return;
+    const w = st.tilesW;
+    const h = st.tilesH;
+    const tl = this.tileLayer;
+    tl.clear();
+    for (let ty = 0; ty < h; ty++) {
+      for (let tx = 0; tx < w; tx++) {
+        const t = (st.tiles[ty * w + tx] ?? 0) as Terrain;
+        const def = TERRAIN[t] ?? TERRAIN[Terrain.Plain];
+        const x = tx * TILE_SIZE;
+        const y = ty * TILE_SIZE;
+        tl.rect(x, y, TILE_SIZE, TILE_SIZE).fill(def.color);
+        if (t === Terrain.Hill) tl.rect(x, y, TILE_SIZE, 4).fill({ color: 0xffffff, alpha: 0.18 });
+        if (!def.passable) {
+          tl.rect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1).stroke({
+            color: 0x000000,
+            width: 1,
+            alpha: 0.3,
+          });
+        }
+      }
+    }
+    this.tilesBuilt = true;
   }
 
   private screenToWorld(sx: number, sy: number): { x: number; y: number } {
@@ -279,9 +314,8 @@ export class PixiRenderer {
     this.world.position.set(this.ox, this.oy);
     this.world.scale.set(this.scale);
 
-    g.rect(0, 0, GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT)
-      .fill(0x10141d)
-      .stroke({ color: 0x2a3142, width: 4 });
+    this.buildTiles(); // grille de terrain (sous les entités, construite une fois)
+    g.rect(0, 0, GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT).stroke({ color: 0x2a3142, width: 4 });
 
     const st = this.getState();
     if (!st) return;

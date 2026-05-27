@@ -1,6 +1,7 @@
 import {
   GameConfig,
   clamp,
+  isPassableWorld,
   type MoveKingPayload,
   type BuildPayload,
   type TrainTroopPayload,
@@ -36,6 +37,8 @@ export function build(state: ArenaState, sessionId: string, payload: BuildPayloa
   if (x === null || y === null) return;
   if (x < 0 || y < 0 || x > GameConfig.MAP_WIDTH || y > GameConfig.MAP_HEIGHT) return;
   if (Math.hypot(x - p.king.x, y - p.king.y) > GameConfig.BUILD_RANGE_FROM_KING) return;
+  // Pas de construction sur une tuile impassable (montagne/eau), si le terrain est chargé.
+  if (state.tiles.length > 0 && !isPassableWorld(state.tiles, x, y)) return;
 
   let tooClose = false;
   state.buildings.forEach((b) => {

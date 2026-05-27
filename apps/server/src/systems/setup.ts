@@ -1,4 +1,4 @@
-import { GameConfig, type BuildingKind } from "@rts/shared";
+import { GameConfig, type BuildingKind, type ZoneBonus } from "@rts/shared";
 import { ArenaState } from "../schema/ArenaState";
 import { Player } from "../schema/Player";
 import { Building } from "../schema/Building";
@@ -13,36 +13,16 @@ export function nextId(prefix: string): string {
 
 const COLORS = [0xff5555, 0x5599ff, 0x55cc66, 0xffcc44, 0xcc66ff, 0x44cccc, 0xff8844, 0xbbbbbb];
 
-/** Positions de départ réparties en cercle autour du centre. */
-export function playerStartPositions(count: number): { x: number; y: number }[] {
-  const cx = GameConfig.MAP_WIDTH / 2;
-  const cy = GameConfig.MAP_HEIGHT / 2;
-  const r = Math.min(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT) * 0.38;
-  const out: { x: number; y: number }[] = [];
-  const n = Math.max(count, 1);
-  for (let i = 0; i < count; i++) {
-    const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-    out.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
-  }
-  return out;
-}
-
-export function createInitialZones(state: ArenaState): void {
-  const cx = GameConfig.MAP_WIDTH / 2;
-  const cy = GameConfig.MAP_HEIGHT / 2;
-  const off = Math.min(GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT) * 0.24;
-  const defs: { dx: number; dy: number; bonus: "gold" | "damage" | "speed" }[] = [
-    { dx: 0, dy: 0, bonus: "gold" },
-    { dx: -1, dy: -1, bonus: "damage" },
-    { dx: 1, dy: -1, bonus: "speed" },
-    { dx: -1, dy: 1, bonus: "speed" },
-    { dx: 1, dy: 1, bonus: "damage" },
-  ];
+/** Crée les zones capturables à partir des définitions issues de la génération de carte. */
+export function createZones(
+  state: ArenaState,
+  defs: { x: number; y: number; bonus: ZoneBonus }[],
+): void {
   for (const d of defs) {
     const z = new Zone();
     z.id = nextId("zone");
-    z.x = cx + d.dx * off;
-    z.y = cy + d.dy * off;
+    z.x = d.x;
+    z.y = d.y;
     z.radius = GameConfig.ZONE.RADIUS;
     z.bonusType = d.bonus;
     state.zones.push(z);
