@@ -129,6 +129,8 @@ export class PixiRenderer {
   private prevTargetId = "";
   private clock = 0;
   private hoverScreen: { x: number; y: number } | null = null;
+  private onResize: (() => void) | null = null;
+  private drawErrored = false;
 
   constructor(
     private parent: HTMLElement,
@@ -140,6 +142,23 @@ export class PixiRenderer {
   async init(): Promise<void> {
     await this.app.init({ resizeTo: this.parent, background: 0x0b0e14, antialias: true });
     this.parent.appendChild(this.app.canvas);
+
+    // Robustesse : récupérer d'une perte de contexte WebGL (sinon canvas noir jusqu'au refresh).
+    (this.app.canvas as HTMLCanvasElement).addEventListener(
+      "webglcontextlost",
+      (e) => e.preventDefault(),
+      false,
+    );
+    // Garantir une taille non nulle (selon le timing de layout).
+    const fit = () => {
+      const w = this.parent.clientWidth || window.innerWidth;
+      const h = this.parent.clientHeight || window.innerHeight;
+      if (w > 0 && h > 0) this.app.renderer.resize(w, h);
+    };
+    fit();
+    this.onResize = fit;
+    window.addEventListener("resize", fit);
+
     this.world.addChild(this.g);
     this.app.stage.addChild(this.world);
 
@@ -239,6 +258,17 @@ export class PixiRenderer {
   }
 
   private draw(): void {
+    try {
+      this.renderFrame();
+    } catch (e) {
+      if (!this.drawErrored) {
+        this.drawErrored = true;
+        console.error("[render] erreur dans renderFrame():", e);
+      }
+    }
+  }
+
+  private renderFrame(): void {
     const dt = this.app.ticker.deltaMS;
     this.clock += dt;
     this.ageEffects(dt);
@@ -557,6 +587,7 @@ export class PixiRenderer {
 
   destroy(): void {
     if (!this.started) return;
+    if (this.onResize) window.removeEventListener("resize", this.onResize);
     this.app.ticker.stop();
     this.app.destroy(true, { children: true });
   }
