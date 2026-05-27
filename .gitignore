@@ -19,8 +19,10 @@ pnpm-debug.log*
 .claude/
 .claude-flow/
 .swarm/
+*.db
 *.rvf
 *.rvf.lock
+.mcp.json
 
 # os
 .DS_Store
