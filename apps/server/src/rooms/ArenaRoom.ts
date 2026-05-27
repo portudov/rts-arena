@@ -182,12 +182,20 @@ export class ArenaRoom extends Room<ArenaState> {
     const ids: string[] = [];
     this.state.players.forEach((p) => ids.push(p.sessionId));
     // Positions équilibrées (rotation symétrique) issues de la génération de carte.
+    // On RÉPARTIT les joueurs sur tout l'anneau (et non sur des secteurs consécutifs) :
+    // sinon, avec 4 joueurs sur 8 emplacements, tout le monde se retrouvait entassé dans
+    // un quart de la carte (« la map paraît minuscule »). Avec N joueurs et P emplacements,
+    // le joueur i prend l'emplacement round(i*P/N) → écart maximal autour du centre.
     const positions = this.startPositions;
     const fallback = { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
+    const count = Math.max(1, ids.length);
     ids.forEach((id, i) => {
       const p = this.state.players.get(id);
       if (!p) return;
-      const pos = positions.length > 0 ? positions[i % positions.length] : fallback;
+      const pos =
+        positions.length > 0
+          ? positions[Math.round((i * positions.length) / count) % positions.length]
+          : fallback;
       p.king.x = pos.x;
       p.king.y = pos.y;
       p.king.targetX = pos.x;

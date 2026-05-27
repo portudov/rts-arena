@@ -1,7 +1,15 @@
 import { createServer } from "http";
 import { Server } from "colyseus";
+import { Encoder } from "@colyseus/schema";
 import { WebSocketTransport } from "@colyseus/ws-transport";
 import { ArenaRoom } from "./rooms/ArenaRoom";
+
+// Grande carte (120×120 = 14 400 tuiles synchronisées) + jusqu'à 8 joueurs et leurs troupes :
+// l'état complet encodé dépasse de loin le BUFFER_SIZE par défaut (8 KB) de @colyseus/schema.
+// Sans ça, l'encodage de l'état échoue ("buffer overflow") → la synchro ne part jamais →
+// le client est déconnecté → en solo onLeave élimine le joueur → la partie se "termine"
+// en quelques secondes. On agrandit le buffer une bonne fois (allocation unique au démarrage).
+Encoder.BUFFER_SIZE = 1024 * 1024; // 1 MB
 
 const port = Number(process.env.PORT ?? 2567);
 
