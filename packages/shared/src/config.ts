@@ -13,9 +13,9 @@ export const GameConfig = {
   MATCH_TIME_LIMIT_MS: 15 * 60 * 1000, // limite de secours: 15 min
   LOBBY_AUTOSTART_MS: 3000, // délai avant démarrage quand MIN_PLAYERS atteint
 
-  // Carte (unités = pixels monde)
-  MAP_WIDTH: 2400,
-  MAP_HEIGHT: 2400,
+  // Carte (unités = pixels monde) — grande carte, caméra qui suit le Roi côté client
+  MAP_WIDTH: 4800,
+  MAP_HEIGHT: 4800,
 
   // Or de départ
   STARTING_GOLD: 200,
@@ -26,7 +26,7 @@ export const GameConfig = {
     DAMAGE: 45,
     RANGE: 70,
     ATTACK_COOLDOWN_MS: 800,
-    SPEED: 190, // px/seconde
+    SPEED: 300, // px/seconde (grande carte)
     RADIUS: 18,
   },
 
@@ -44,7 +44,7 @@ export const GameConfig = {
     },
   },
   BUILD_MIN_DISTANCE: 70, // distance min entre 2 bâtiments
-  BUILD_RANGE_FROM_KING: 450, // on ne peut bâtir qu'autour de son Roi
+  BUILD_RANGE_FROM_KING: 700, // on ne peut bâtir qu'autour de son Roi
 
   // Troupes
   TROOP: {
@@ -56,14 +56,14 @@ export const GameConfig = {
     attackCooldownMs: 600,
     speed: 130, // px/seconde
     radius: 10,
-    idleSpread: 70, // rayon d'attente autour de la caserne
-    aggroRange: 220, // distance à laquelle une troupe engage un ennemi proche en chemin
+    idleSpread: 90, // rayon d'attente autour de la caserne
+    aggroRange: 320, // distance à laquelle une troupe engage un ennemi proche en chemin
   },
   MAX_TROOPS_PER_PLAYER: 40,
 
   // Zones capturables
   ZONE: {
-    RADIUS: 170,
+    RADIUS: 240,
     CAPTURE_TIME_MS: 6000, // temps pour passer 0 -> 1 avec 1 unité
     DECAY_PER_SEC: 0.12, // décroissance de capture si zone vide
   },

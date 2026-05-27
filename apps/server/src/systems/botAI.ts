@@ -14,13 +14,14 @@ const AI: Record<
     attackAt: number; // nb de troupes avant d'attaquer
     ecoTrickle: number; // bonus d'or par action (Difficile)
     maxMines: number;
+    barracks: number; // nb de casernes visées (production)
     retreatHp: number; // fraction de PV sous laquelle le Roi fuit
     focusHuman: boolean; // priorise le joueur humain
   }
 > = {
-  easy: { actEvery: 3, attackAt: 7, ecoTrickle: 0, maxMines: 2, retreatHp: 0.2, focusHuman: false },
-  normal: { actEvery: 1, attackAt: 4, ecoTrickle: 0, maxMines: 3, retreatHp: 0.35, focusHuman: false },
-  hard: { actEvery: 1, attackAt: 3, ecoTrickle: 6, maxMines: 4, retreatHp: 0.45, focusHuman: true },
+  easy: { actEvery: 3, attackAt: 6, ecoTrickle: 0, maxMines: 3, barracks: 1, retreatHp: 0.2, focusHuman: false },
+  normal: { actEvery: 1, attackAt: 4, ecoTrickle: 0, maxMines: 5, barracks: 2, retreatHp: 0.3, focusHuman: false },
+  hard: { actEvery: 1, attackAt: 3, ecoTrickle: 12, maxMines: 7, barracks: 3, retreatHp: 0.4, focusHuman: true },
 };
 
 /** Quel type CONTRE le type donné (triangle). */
@@ -75,19 +76,25 @@ export function updateBotAI(state: ArenaState, difficulty: Difficulty = "normal"
       return { x: kx + Math.cos(a) * r, y: ky + Math.sin(a) * r };
     };
 
-    // MACRO : caserne -> mines -> tour -> 2e caserne
-    if (barracks === 0 && bot.gold >= GameConfig.BUILDINGS.barracks.cost) {
+    // MACRO : 1 caserne -> 2 mines -> casernes supplémentaires -> reste des mines -> tour
+    const bCost = GameConfig.BUILDINGS.barracks.cost;
+    const mCost = GameConfig.BUILDINGS.goldmine.cost;
+    const tCost = GameConfig.BUILDINGS.tower.cost;
+    if (barracks === 0 && bot.gold >= bCost) {
       const s = spot(0);
       intents.build(state, bot.sessionId, { kind: "barracks", x: s.x, y: s.y });
-    } else if (mines < cfg.maxMines && bot.gold >= GameConfig.BUILDINGS.goldmine.cost) {
+    } else if (mines < 2 && bot.gold >= mCost) {
       const s = spot(mines + 1);
       intents.build(state, bot.sessionId, { kind: "goldmine", x: s.x, y: s.y });
-    } else if (towers === 0 && bot.gold >= GameConfig.BUILDINGS.tower.cost) {
+    } else if (barracks < cfg.barracks && bot.gold >= bCost) {
+      const s = spot(barracks + 5);
+      intents.build(state, bot.sessionId, { kind: "barracks", x: s.x, y: s.y });
+    } else if (mines < cfg.maxMines && bot.gold >= mCost) {
+      const s = spot(mines + 1);
+      intents.build(state, bot.sessionId, { kind: "goldmine", x: s.x, y: s.y });
+    } else if (towers === 0 && bot.gold >= tCost) {
       const s = spot(4);
       intents.build(state, bot.sessionId, { kind: "tower", x: s.x, y: s.y });
-    } else if (barracks < 2 && troops > 6 && bot.gold >= GameConfig.BUILDINGS.barracks.cost) {
-      const s = spot(5);
-      intents.build(state, bot.sessionId, { kind: "barracks", x: s.x, y: s.y });
     }
 
     // COMPOSITION : contrer le type ennemi dominant, sinon équilibrer
@@ -111,12 +118,10 @@ export function updateBotAI(state: ArenaState, difficulty: Difficulty = "normal"
       }
     }
 
-    // ATTAQUE : assez de troupes -> cible (plus proche/faible, humain en priorité en Difficile)
+    // ATTAQUE : ré-engage TOUTE l'armée à chaque action (les nouvelles troupes rejoignent l'assaut)
     if (troops >= cfg.attackAt) {
       const tgt = pickTarget(state, bot, cfg.focusHuman);
-      if (tgt && bot.currentTargetId !== tgt) {
-        intents.attackTarget(state, bot.sessionId, { targetPlayerId: tgt });
-      }
+      if (tgt) intents.attackTarget(state, bot.sessionId, { targetPlayerId: tgt });
     }
   });
 }

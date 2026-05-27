@@ -4,9 +4,9 @@
  * de types de terrain (entiers). Toute logique (déplacement, vision, combat) lit ce contrat.
  */
 export const TILE_SIZE = 40;
-export const MAP_TILES_W = 60;
-export const MAP_TILES_H = 60;
-// Monde dérivé : 60 * 40 = 2400 (cohérent avec GameConfig.MAP_WIDTH/HEIGHT).
+export const MAP_TILES_W = 120;
+export const MAP_TILES_H = 120;
+// Monde dérivé : 120 * 40 = 4800 (cohérent avec GameConfig.MAP_WIDTH/HEIGHT).
 
 export enum Terrain {
   Plain = 0,

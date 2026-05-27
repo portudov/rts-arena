@@ -123,6 +123,7 @@ export class PixiRenderer {
   private scale = 1;
   private ox = 0;
   private oy = 0;
+  private zoom = 1.1; // niveau de zoom de la caméra (molette)
   private started = false;
 
   // effets / lisibilité combat
@@ -165,6 +166,17 @@ export class PixiRenderer {
     this.onResize = fit;
     window.addEventListener("resize", fit);
 
+    // Zoom à la molette (la caméra suit le Roi).
+    (this.app.canvas as HTMLCanvasElement).addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const f = e.deltaY < 0 ? 1.12 : 1 / 1.12;
+        this.zoom = Math.max(0.18, Math.min(2.5, this.zoom * f));
+      },
+      { passive: false },
+    );
+
     this.world.addChild(this.tileLayer); // terrain SOUS les entités
     this.world.addChild(this.g);
     this.app.stage.addChild(this.world);
@@ -181,9 +193,32 @@ export class PixiRenderer {
   private computeTransform(): void {
     const w = this.app.renderer.width;
     const h = this.app.renderer.height;
-    this.scale = Math.min(w / GameConfig.MAP_WIDTH, h / GameConfig.MAP_HEIGHT);
-    this.ox = (w - GameConfig.MAP_WIDTH * this.scale) / 2;
-    this.oy = (h - GameConfig.MAP_HEIGHT * this.scale) / 2;
+    const MW = GameConfig.MAP_WIDTH;
+    const MH = GameConfig.MAP_HEIGHT;
+    this.scale = this.zoom;
+    // Caméra centrée sur MON Roi (sinon centre de la carte).
+    let cx = MW / 2;
+    let cy = MH / 2;
+    const me = this.mySessionId();
+    const rp = this.renderPos.get("k:" + me);
+    if (rp) {
+      cx = rp.x;
+      cy = rp.y;
+    } else {
+      const st = this.getState();
+      const p = st?.players.get(me);
+      if (p) {
+        cx = p.king.x;
+        cy = p.king.y;
+      }
+    }
+    // Clamp : ne pas montrer hors carte (sauf si la vue dépasse la carte → centrée).
+    const halfW = w / (2 * this.scale);
+    const halfH = h / (2 * this.scale);
+    cx = MW > halfW * 2 ? Math.max(halfW, Math.min(MW - halfW, cx)) : MW / 2;
+    cy = MH > halfH * 2 ? Math.max(halfH, Math.min(MH - halfH, cy)) : MH / 2;
+    this.ox = w / 2 - cx * this.scale;
+    this.oy = h / 2 - cy * this.scale;
   }
 
   /** Construit la grille de terrain UNE SEULE FOIS (statique, synchronisée une fois). */
