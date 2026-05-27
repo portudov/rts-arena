@@ -6,9 +6,10 @@ import { ClientMessage, type BuildingKind } from "@rts/shared";
 import { PixiRenderer, type StateView } from "./PixiRenderer";
 import HUD, { type HudSnapshot } from "@/components/HUD";
 
-function buildSnapshot(room: Room): HudSnapshot {
+function buildSnapshot(room: Room): HudSnapshot | null {
   const st = room.state as unknown as StateView;
   const me = room.sessionId;
+  if (!st || !st.players) return null; // état pas encore synchronisé
   const players: HudSnapshot["players"] = [];
   let gold = 0;
   let myAllianceId = "";
