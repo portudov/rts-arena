@@ -230,21 +230,27 @@ export class PixiRenderer {
     const h = st.tilesH;
     const tl = this.tileLayer;
     tl.clear();
+    // Fusion des runs horizontaux de même terrain -> bien moins de rectangles (perf grande carte).
     for (let ty = 0; ty < h; ty++) {
-      for (let tx = 0; tx < w; tx++) {
+      let tx = 0;
+      while (tx < w) {
         const t = (st.tiles[ty * w + tx] ?? 0) as Terrain;
+        let run = 1;
+        while (tx + run < w && ((st.tiles[ty * w + tx + run] ?? 0) as Terrain) === t) run++;
         const def = TERRAIN[t] ?? TERRAIN[Terrain.Plain];
         const x = tx * TILE_SIZE;
         const y = ty * TILE_SIZE;
-        tl.rect(x, y, TILE_SIZE, TILE_SIZE).fill(def.color);
-        if (t === Terrain.Hill) tl.rect(x, y, TILE_SIZE, 4).fill({ color: 0xffffff, alpha: 0.18 });
+        const wpx = run * TILE_SIZE;
+        tl.rect(x, y, wpx, TILE_SIZE).fill(def.color);
+        if (t === Terrain.Hill) tl.rect(x, y, wpx, 4).fill({ color: 0xffffff, alpha: 0.18 });
         if (!def.passable) {
-          tl.rect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1).stroke({
+          tl.rect(x + 0.5, y + 0.5, wpx - 1, TILE_SIZE - 1).stroke({
             color: 0x000000,
             width: 1,
             alpha: 0.3,
           });
         }
+        tx += run;
       }
     }
     this.tilesBuilt = true;
