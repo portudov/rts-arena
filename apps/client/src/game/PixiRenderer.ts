@@ -206,7 +206,7 @@ export class PixiRenderer {
       cy = rp.y;
     } else {
       const st = this.getState();
-      const p = st?.players.get(me);
+      const p = st?.players?.get(me);
       if (p) {
         cx = p.king.x;
         cy = p.king.y;
@@ -354,7 +354,8 @@ export class PixiRenderer {
     g.rect(0, 0, GameConfig.MAP_WIDTH, GameConfig.MAP_HEIGHT).stroke({ color: 0x2a3142, width: 4 });
 
     const st = this.getState();
-    if (!st) return;
+    // Attendre que toutes les collections d'état soient synchronisées (évite undefined.forEach en début de partie).
+    if (!st || !st.players || !st.zones || !st.buildings || !st.troops) return;
     const me = this.mySessionId();
 
     // alliances
