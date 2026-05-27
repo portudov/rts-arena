@@ -1,4 +1,4 @@
-import { GameConfig, type BuildingKind, type ZoneBonus } from "@rts/shared";
+import { GameConfig, unitDef, type BuildingKind, type ZoneBonus } from "@rts/shared";
 import { ArenaState } from "../schema/ArenaState";
 import { Player } from "../schema/Player";
 import { Building } from "../schema/Building";
@@ -97,16 +97,24 @@ export function addBuilding(
   return b;
 }
 
-export function spawnTroop(state: ArenaState, ownerId: string, x: number, y: number): Troop {
+export function spawnTroop(
+  state: ArenaState,
+  ownerId: string,
+  x: number,
+  y: number,
+  kind = "infantry",
+): Troop {
+  const def = unitDef(kind);
   const t = new Troop();
   t.id = nextId("trp");
   t.ownerId = ownerId;
+  t.kind = kind;
   t.x = x;
   t.y = y;
   t.targetX = x;
   t.targetY = y;
-  t.maxHp = GameConfig.TROOP.maxHp;
-  t.hp = t.maxHp;
+  t.maxHp = def.hp;
+  t.hp = def.hp;
   t.state = "idle";
   state.troops.set(t.id, t);
   return t;

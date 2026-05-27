@@ -1,4 +1,5 @@
 import type { BuildingKind } from "./types";
+import type { UnitKind } from "./units";
 
 /** Noms des messages d'INTENTION (client -> serveur). Le serveur décide du résultat. */
 export const ClientMessage = {
@@ -26,6 +27,8 @@ export interface BuildPayload {
 export interface TrainTroopPayload {
   /** Id de la caserne d'où produire (optionnel: première caserne dispo sinon). */
   buildingId?: string;
+  /** Type d'unité à produire (défaut: infanterie). */
+  unit?: UnitKind;
 }
 
 export interface AttackTargetPayload {

@@ -105,7 +105,7 @@ export default function GameCanvas({ room }: { room: Room }) {
         pendingBuild={pendingBuild}
         invites={invites}
         onSelectBuild={selectBuild}
-        onTrain={() => room.send(ClientMessage.TrainTroop, {})}
+        onTrain={(unit) => room.send(ClientMessage.TrainTroop, { unit })}
         onRequestAlliance={(id) => room.send(ClientMessage.AllianceRequest, { targetPlayerId: id })}
         onAcceptAlliance={(fromPlayerId) => {
           room.send(ClientMessage.AllianceAccept, { fromPlayerId });

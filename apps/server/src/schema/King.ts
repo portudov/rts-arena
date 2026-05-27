@@ -11,4 +11,8 @@ export class King extends Schema {
 
   // server-only (non synchronisé)
   atkCd = 0;
+  // server-only (pathfinding A*)
+  path: { x: number; y: number }[] = [];
+  pathIdx = 0;
+  pathGoalKey = "";
 }

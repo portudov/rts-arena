@@ -16,4 +16,8 @@ export class Troop extends Schema {
 
   // server-only
   atkCd = 0;
+  // server-only (pathfinding A*)
+  path: { x: number; y: number }[] = [];
+  pathIdx = 0;
+  pathGoalKey = "";
 }

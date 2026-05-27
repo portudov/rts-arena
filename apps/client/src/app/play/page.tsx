@@ -10,6 +10,7 @@ export default function PlayPage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [pseudo, setPseudo] = useState("");
   const [bots, setBots] = useState(1);
+  const [difficulty, setDifficulty] = useState("normal");
   const [status, setStatus] = useState<"idle" | "connecting" | "error">("idle");
   const [err, setErr] = useState("");
   const connecting = useRef(false);
@@ -58,7 +59,7 @@ export default function PlayPage() {
         />
 
         <button
-          onClick={() => connect((t) => createSoloArena(t, bots))}
+          onClick={() => connect((t) => createSoloArena(t, bots, difficulty))}
           className="w-full px-4 py-3 rounded bg-emerald-600 hover:bg-emerald-500 font-semibold"
         >
           🤖 Jouer en solo (vs IA)
@@ -73,6 +74,25 @@ export default function PlayPage() {
               className={`w-8 h-8 rounded ${bots === n ? "bg-emerald-500" : "bg-slate-700 hover:bg-slate-600"}`}
             >
               {n}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-center gap-2 text-sm opacity-80">
+          <span>Difficulté&nbsp;:</span>
+          {(
+            [
+              ["easy", "Facile"],
+              ["normal", "Normal"],
+              ["hard", "Difficile"],
+            ] as const
+          ).map(([d, lbl]) => (
+            <button
+              key={d}
+              onClick={() => setDifficulty(d)}
+              className={`px-3 h-8 rounded ${difficulty === d ? "bg-emerald-500" : "bg-slate-700 hover:bg-slate-600"}`}
+            >
+              {lbl}
             </button>
           ))}
         </div>

@@ -1,4 +1,4 @@
-import { GameConfig } from "@rts/shared";
+import { GameConfig, unitDef } from "@rts/shared";
 import { ArenaState } from "../schema/ArenaState";
 import { getPlayerBonuses } from "./bonuses";
 import { spawnTroop } from "./setup";
@@ -24,7 +24,7 @@ export function updateEconomy(state: ArenaState, dtMs: number): void {
   state.buildings.forEach((b) => {
     if (b.kind !== "barracks" || b.trainTimer < 0) return;
     b.trainTimer -= dtMs;
-    b.trainProgress = 1 - Math.max(0, b.trainTimer) / GameConfig.TROOP.trainTimeMs;
+    b.trainProgress = 1 - Math.max(0, b.trainTimer) / unitDef(b.trainKind).trainMs;
     if (b.trainTimer <= 0) {
       let count = 0;
       state.troops.forEach((t) => {
@@ -33,7 +33,7 @@ export function updateEconomy(state: ArenaState, dtMs: number): void {
       if (count < GameConfig.MAX_TROOPS_PER_PLAYER) {
         const angle = Math.random() * Math.PI * 2;
         const r = GameConfig.TROOP.idleSpread * (0.4 + Math.random() * 0.6);
-        spawnTroop(state, b.ownerId, b.x + Math.cos(angle) * r, b.y + Math.sin(angle) * r);
+        spawnTroop(state, b.ownerId, b.x + Math.cos(angle) * r, b.y + Math.sin(angle) * r, b.trainKind);
       }
       b.trainTimer = -1;
       b.trainProgress = 0;

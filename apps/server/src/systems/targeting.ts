@@ -5,6 +5,8 @@ export interface EnemyHit {
   x: number;
   y: number;
   dist: number;
+  /** Type d'unité de la cible (pour les contres), si c'est une troupe. */
+  defKind?: string;
   /** Applique des dégâts; gère la mort/retrait. Retourne true si la cible est détruite. */
   hit: (dmg: number) => boolean;
 }
@@ -53,6 +55,7 @@ export function nearestEnemy(
       x: t.x,
       y: t.y,
       dist: d,
+      defKind: t.kind,
       hit: (dmg: number) => {
         t.hp -= dmg;
         if (t.hp <= 0) {

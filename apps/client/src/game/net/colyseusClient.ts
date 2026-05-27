@@ -9,7 +9,7 @@ export async function joinArena(token: string): Promise<Room> {
 }
 
 /** Crée une room SOLO dédiée (1 humain vs `bots` IA), démarrage immédiat. */
-export async function createSoloArena(token: string, bots = 1): Promise<Room> {
+export async function createSoloArena(token: string, bots = 1, difficulty = "normal"): Promise<Room> {
   const client = new Client(WS_URL);
-  return client.create("arena", { token, mode: "solo", bots });
+  return client.create("arena", { token, mode: "solo", bots, difficulty });
 }

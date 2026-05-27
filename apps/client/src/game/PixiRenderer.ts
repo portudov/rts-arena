@@ -1,5 +1,5 @@
 import { Application, Container, Graphics, Text } from "pixi.js";
-import { GameConfig, TERRAIN, Terrain, TILE_SIZE } from "@rts/shared";
+import { GameConfig, TERRAIN, Terrain, TILE_SIZE, unitDef } from "@rts/shared";
 
 // Vues typées de l'état Colyseus décodé côté client.
 interface KingView {
@@ -27,6 +27,7 @@ interface TroopView {
   hp: number;
   maxHp: number;
   state: string;
+  kind: string;
 }
 interface BuildingView {
   id: string;
@@ -384,18 +385,19 @@ export class PixiRenderer {
       const rp = this.lerpPos(t.id, t.x, t.y);
       this.damageCheck(t.id, t.hp, rp.x, rp.y, false);
       const engaging = t.state === "engaging";
-      g.circle(rp.x, rp.y, GameConfig.TROOP.radius)
-        .fill(color)
-        .stroke({ color: 0x000000, width: 1 });
+      const ud = unitDef(t.kind);
+      const tr = ud.radius;
+      g.circle(rp.x, rp.y, tr).fill(color).stroke({ color: 0x000000, width: 1 });
+      g.circle(rp.x, rp.y, tr * 0.5).fill(ud.color); // marqueur de type d'unité
       if (engaging) {
         const pulse = 0.5 + 0.5 * Math.sin(this.clock / 90);
-        g.circle(rp.x, rp.y, GameConfig.TROOP.radius + 3).stroke({
+        g.circle(rp.x, rp.y, tr + 3).stroke({
           color: 0xff3333,
           width: 1.5,
           alpha: 0.5 + 0.5 * pulse,
         });
       }
-      this.flashOverlay(g, t.id, rp.x, rp.y, GameConfig.TROOP.radius);
+      this.flashOverlay(g, t.id, rp.x, rp.y, tr);
       entities.push({
         key: t.id,
         owner: t.ownerId,

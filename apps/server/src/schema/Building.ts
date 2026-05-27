@@ -14,4 +14,5 @@ export class Building extends Schema {
   // server-only
   atkCd = 0; // tour
   trainTimer = -1; // caserne: ms restant, -1 = inactif
+  trainKind = "infantry"; // caserne: type d'unité en production
 }

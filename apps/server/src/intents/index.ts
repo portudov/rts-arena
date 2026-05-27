@@ -2,6 +2,7 @@ import {
   GameConfig,
   clamp,
   isPassableWorld,
+  unitDef,
   type MoveKingPayload,
   type BuildPayload,
   type TrainTroopPayload,
@@ -62,6 +63,9 @@ export function trainTroop(state: ArenaState, sessionId: string, payload: TrainT
   });
   if (count >= GameConfig.MAX_TROOPS_PER_PLAYER) return;
 
+  const unit: "infantry" | "archer" | "cavalry" =
+    payload?.unit === "archer" || payload?.unit === "cavalry" ? payload.unit : "infantry";
+
   let chosen: Building | null = null;
   state.buildings.forEach((b) => {
     if (chosen) return;
@@ -70,9 +74,11 @@ export function trainTroop(state: ArenaState, sessionId: string, payload: TrainT
     chosen = b;
   });
   if (!chosen) return;
-  if (p.gold < GameConfig.TROOP.cost) return;
-  p.gold -= GameConfig.TROOP.cost;
-  (chosen as Building).trainTimer = GameConfig.TROOP.trainTimeMs;
+  const def = unitDef(unit);
+  if (p.gold < def.cost) return;
+  p.gold -= def.cost;
+  (chosen as Building).trainKind = unit;
+  (chosen as Building).trainTimer = def.trainMs;
   (chosen as Building).trainProgress = 0;
 }
 

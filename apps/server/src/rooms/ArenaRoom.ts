@@ -36,6 +36,7 @@ export class ArenaRoom extends Room<ArenaState> {
   private ended = false;
   private solo = false;
   private botTimer = 0;
+  private difficulty: "easy" | "normal" | "hard" = "normal";
   // Positions de départ équilibrées (rotation symétrique) issues de la génération de carte.
   private startPositions: { x: number; y: number }[] = [];
 
@@ -43,7 +44,7 @@ export class ArenaRoom extends Room<ArenaState> {
     return verifySupabaseJwt(options?.token);
   }
 
-  override onCreate(options?: { mode?: string; bots?: number; seed?: number }): void {
+  override onCreate(options?: { mode?: string; bots?: number; seed?: number; difficulty?: string }): void {
     this.setState(new ArenaState());
     this.state.timeLimitMs = GameConfig.MATCH_TIME_LIMIT_MS;
 
@@ -63,11 +64,19 @@ export class ArenaRoom extends Room<ArenaState> {
     // Mode SOLO : 1 humain vs bots (IA). Room privée + verrouillée, démarrage immédiat.
     if (options?.mode === "solo") {
       this.solo = true;
+      const diff = options.difficulty;
+      this.difficulty = diff === "easy" || diff === "hard" ? diff : "normal";
       const n = Math.max(1, Math.min(3, Math.floor(options.bots ?? 1)));
       for (let i = 0; i < n; i++) {
         // Les bots prennent les dernières positions de départ (l'humain prendra la première).
         const pos = this.startPositions[(this.startPositions.length - 1 - i + this.startPositions.length) % this.startPositions.length];
         createBot(this.state, "bot:" + i, "🤖 Bot " + (i + 1), pos, this.colorCounter++);
+      }
+      // Difficile : les bots s'allient pour faire front commun contre l'humain.
+      if (this.difficulty === "hard") {
+        this.state.players.forEach((pl) => {
+          if (pl.isBot) pl.allianceId = "bots";
+        });
       }
       this.setPrivate(true);
       this.lock();
@@ -151,7 +160,7 @@ export class ArenaRoom extends Room<ArenaState> {
     if (this.solo) {
       this.botTimer += dt;
       if (this.botTimer >= 700) {
-        updateBotAI(s);
+        updateBotAI(s, this.difficulty);
         this.botTimer = 0;
       }
     }

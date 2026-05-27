@@ -1,6 +1,6 @@
 "use client";
 
-import { GameConfig, type BuildingKind } from "@rts/shared";
+import { GameConfig, UNITS, UNIT_KINDS, type BuildingKind, type UnitKind } from "@rts/shared";
 
 export interface HudPlayer {
   sessionId: string;
@@ -29,7 +29,7 @@ interface Props {
   pendingBuild: BuildingKind | null;
   invites: { fromPlayerId: string; fromPseudo: string }[];
   onSelectBuild: (k: BuildingKind) => void;
-  onTrain: () => void;
+  onTrain: (unit: UnitKind) => void;
   onRequestAlliance: (id: string) => void;
   onAcceptAlliance: (id: string) => void;
 }
@@ -102,12 +102,16 @@ export default function HUD(props: Props) {
                 {label(k)} <span className="opacity-60">({GameConfig.BUILDINGS[k].cost})</span>
               </button>
             ))}
-            <button
-              onClick={props.onTrain}
-              className="px-3 py-2 rounded text-sm bg-indigo-600 hover:bg-indigo-500"
-            >
-              🛡️ Troupe <span className="opacity-60">({GameConfig.TROOP.cost})</span>
-            </button>
+            {UNIT_KINDS.map((k) => (
+              <button
+                key={k}
+                onClick={() => props.onTrain(k)}
+                className="px-3 py-2 rounded text-sm bg-indigo-600 hover:bg-indigo-500"
+              >
+                {k === "infantry" ? "⚔️" : k === "archer" ? "🏹" : "🐎"} {UNITS[k].name}{" "}
+                <span className="opacity-60">({UNITS[k].cost})</span>
+              </button>
+            ))}
           </div>
 
           <div className="absolute bottom-3 left-3 text-xs opacity-60 max-w-[230px] pointer-events-none">
