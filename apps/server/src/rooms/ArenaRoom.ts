@@ -16,9 +16,11 @@ import * as intents from "../intents";
 import {
   createInitialZones,
   createPlayer,
+  createBot,
   playerStartPositions,
   neutralizePlayer,
 } from "../systems/setup";
+import { updateBotAI } from "../systems/botAI";
 import { updateEconomy } from "../systems/economy";
 import { updateMovement } from "../systems/movement";
 import { updateCombat } from "../systems/combat";
@@ -31,15 +33,29 @@ export class ArenaRoom extends Room<ArenaState> {
   private pendingAlliances = new Map<string, Set<string>>();
   private colorCounter = 0;
   private ended = false;
+  private solo = false;
+  private botTimer = 0;
 
   override async onAuth(_client: Client, options: { token?: string }): Promise<AuthData> {
     return verifySupabaseJwt(options?.token);
   }
 
-  override onCreate(): void {
+  override onCreate(options?: { mode?: string; bots?: number }): void {
     this.setState(new ArenaState());
     this.state.timeLimitMs = GameConfig.MATCH_TIME_LIMIT_MS;
     createInitialZones(this.state);
+
+    // Mode SOLO : 1 humain vs bots (IA). Room privée + verrouillée, démarrage immédiat.
+    if (options?.mode === "solo") {
+      this.solo = true;
+      const n = Math.max(1, Math.min(3, Math.floor(options.bots ?? 1)));
+      const center = { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
+      for (let i = 0; i < n; i++) {
+        createBot(this.state, "bot:" + i, "🤖 Bot " + (i + 1), center, this.colorCounter++);
+      }
+      this.setPrivate(true);
+      this.lock();
+    }
 
     this.onMessage(ClientMessage.MoveKing, (c, m: MoveKingPayload) =>
       intents.moveKing(this.state, c.sessionId, m),
@@ -55,7 +71,6 @@ export class ArenaRoom extends Room<ArenaState> {
     );
     this.onMessage(ClientMessage.AllianceRequest, (c, m: AllianceRequestPayload) => {
       intents.allianceRequest(this.state, this.pendingAlliances, c.sessionId, m);
-      // Notifier le joueur ciblé s'il a bien reçu une demande valide
       if (this.pendingAlliances.get(m?.targetPlayerId)?.has(c.sessionId)) {
         const requester = this.state.players.get(c.sessionId);
         const target = this.clients.find((cl) => cl.sessionId === m.targetPlayerId);
@@ -74,6 +89,8 @@ export class ArenaRoom extends Room<ArenaState> {
   override onJoin(client: Client, _options: unknown, auth: AuthData): void {
     const center = { x: GameConfig.MAP_WIDTH / 2, y: GameConfig.MAP_HEIGHT / 2 };
     createPlayer(this.state, client.sessionId, auth, center, this.colorCounter++);
+    // En solo, la partie démarre dès que l'humain a rejoint (bots déjà créés).
+    if (this.solo && this.state.phase === "lobby") this.startMatch();
   }
 
   override async onLeave(client: Client, consented: boolean): Promise<void> {
@@ -84,7 +101,8 @@ export class ArenaRoom extends Room<ArenaState> {
       this.state.players.delete(client.sessionId);
       return;
     }
-    if (!consented) {
+    // En solo, pas de reconnexion à attendre : on libère.
+    if (!consented && !this.solo) {
       try {
         await this.allowReconnection(client, 30);
         if (p) p.connected = true;
@@ -113,6 +131,13 @@ export class ArenaRoom extends Room<ArenaState> {
     if (s.phase !== "playing") return;
 
     s.elapsedMs += dt;
+    if (this.solo) {
+      this.botTimer += dt;
+      if (this.botTimer >= 700) {
+        updateBotAI(s);
+        this.botTimer = 0;
+      }
+    }
     updateEconomy(s, dt);
     updateMovement(s, dt);
     updateCombat(s, dt);
@@ -141,7 +166,7 @@ export class ArenaRoom extends Room<ArenaState> {
     });
     this.state.phase = "playing";
     this.state.elapsedMs = 0;
-    this.lock(); // pas de join en cours de partie (MVP)
+    this.lock();
   }
 
   private async onMatchEnd(winnerId: string): Promise<void> {
@@ -150,6 +175,7 @@ export class ArenaRoom extends Room<ArenaState> {
     let winnerUserId = "";
 
     this.state.players.forEach((p) => {
+      if (p.isBot) return; // on ne persiste pas les bots
       const isWinner =
         p.sessionId === winnerId ||
         (winner !== undefined && winner.allianceId !== "" && p.allianceId === winner.allianceId);
@@ -162,7 +188,9 @@ export class ArenaRoom extends Room<ArenaState> {
       });
     });
 
-    await persistMatch(winnerUserId, players, { mode: "arena", players: players.length });
+    if (players.length > 0) {
+      await persistMatch(winnerUserId, players, { mode: this.solo ? "solo" : "arena", players: players.length });
+    }
     this.clock.setTimeout(() => this.disconnect(), 15000);
   }
 }

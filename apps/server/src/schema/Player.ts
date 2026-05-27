@@ -11,5 +11,6 @@ export class Player extends Schema {
   @type("boolean") connected = true;
   @type("number") color = 0xffffff;
   @type("string") currentTargetId = ""; // cible d'attaque courante (UI)
+  @type("boolean") isBot = false;
   @type(King) king = new King();
 }

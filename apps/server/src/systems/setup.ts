@@ -73,6 +73,31 @@ export function createPlayer(
   return p;
 }
 
+export function createBot(
+  state: ArenaState,
+  id: string,
+  pseudo: string,
+  pos: { x: number; y: number },
+  colorIndex: number,
+): Player {
+  const p = new Player();
+  p.sessionId = id;
+  p.profileId = id;
+  p.pseudo = pseudo;
+  p.gold = GameConfig.STARTING_GOLD;
+  p.color = COLORS[colorIndex % COLORS.length];
+  p.isBot = true;
+  p.king.x = pos.x;
+  p.king.y = pos.y;
+  p.king.targetX = pos.x;
+  p.king.targetY = pos.y;
+  p.king.maxHp = GameConfig.KING.MAX_HP;
+  p.king.hp = GameConfig.KING.MAX_HP;
+  p.king.alive = true;
+  state.players.set(id, p);
+  return p;
+}
+
 export function addBuilding(
   state: ArenaState,
   ownerId: string,
